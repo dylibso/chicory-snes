@@ -135,8 +135,8 @@ public class App
 
         Module module = builder.build();
 
-        //Module finalModule = module;
-        //module = builder.withMachineFactory(instance -> new AotMachine(finalModule.wasmModule(), instance)).build();
+        Module finalModule = module;
+        module = builder.withMachineFactory(instance -> new AotMachine(finalModule.wasmModule(), instance)).build();
 
         Instance instance = module.instantiate();
 
