@@ -133,10 +133,7 @@ public class App
                 .withLogger(new SystemLogger())
                 .withHostImports(imports);
 
-        Module module = builder.build();
-
-        Module finalModule = module;
-        module = builder.withMachineFactory(instance -> new AotMachine(finalModule.wasmModule(), instance)).build();
+        Module module = builder.withMachineFactory(instance -> new AotMachine(instance.module().wasmModule(), instance)).build();
 
         Instance instance = module.instantiate();
 
