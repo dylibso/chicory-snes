@@ -30,6 +30,7 @@ class SNESFrameRenderer extends JPanel {
     }
 
     public void updateFrame(byte[] buffer) {
+        System.out.println(buffer.length);
         for (int i = 0, j = 0; i < imageData.length; i++, j += 2) {
             int rgb565 = ((buffer[j + 1] & 0xFF) << 8) | (buffer[j] & 0xFF);
             // Get channels
@@ -52,27 +53,15 @@ class SNESFrameRenderer extends JPanel {
         Graphics2D g2d = (Graphics2D) g;
 
         // Enable antialiasing for better image quality
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-
-        // Calculate the scaling factor to fit the panel
-        int panelWidth = getWidth();
-        int panelHeight = getHeight();
-//        double scaleX = (double) panelWidth / image.getWidth();
-//        double scaleY = (double) panelHeight / image.getHeight();
-//        double scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
-
-        // Calculate the top-left corner for centering the image
-        int x = (panelWidth - (int) (image.getWidth() * 2.0)) / 2;
-        int y = (panelHeight - (int) (image.getHeight() * 2.0)) / 2;
+        //g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
         // Draw the scaled image
-        g2d.drawImage(image, x, y, (int) (image.getWidth() * 2.0), (int) (image.getHeight() * 2.0), null);
-        //g.drawImage(image, x, y, this);
+        g2d.drawImage(image, 0, 0, image.getWidth(), image.getHeight(), null);
     }
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(512, 448);
+        return new Dimension(512 / 2, 448 / 2);
     }
 }
 
@@ -131,11 +120,11 @@ public class App
         var builder = Module
                 .builder("snes9x_2005-raw.wasm")
                 .withLogger(new SystemLogger())
-                .withHostImports(imports).build();
+                .withHostImports(imports);
 
-        //Module module = builder.withMachineFactory(instance -> new AotMachine(instance)).build();
+        Module module = builder.withMachineFactory(instance -> new AotMachine(instance)).build();
 
-        Instance instance = builder.instantiate();
+        Instance instance = module.instantiate();
 
         var callCtors = instance.export("f");
         var setJoypadInput = instance.export("h");
