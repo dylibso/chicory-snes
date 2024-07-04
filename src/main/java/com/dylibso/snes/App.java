@@ -131,11 +131,11 @@ public class App
         var builder = Module
                 .builder("snes9x_2005-raw.wasm")
                 .withLogger(new SystemLogger())
-                .withHostImports(imports);
+                .withHostImports(imports).build();
 
-        Module module = builder.withMachineFactory(instance -> new AotMachine(instance.module().wasmModule(), instance)).build();
+        //Module module = builder.withMachineFactory(instance -> new AotMachine(instance)).build();
 
-        Instance instance = module.instantiate();
+        Instance instance = builder.instantiate();
 
         var callCtors = instance.export("f");
         var setJoypadInput = instance.export("h");
