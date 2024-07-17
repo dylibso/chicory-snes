@@ -61,7 +61,7 @@ class SNESFrameRenderer extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(512 / 2, 448 / 2);
+        return new Dimension(256, 224);
     }
 }
 
@@ -170,15 +170,15 @@ public class App
 
         while (true) {
             setJoypadInput.apply(Value.i32(0));
-            long startTime = System.currentTimeMillis();
+            long startTime = System.nanoTime();
             mainLoop.apply();
-            System.out.println("Main Loop: " + (System.currentTimeMillis() - startTime) + "ms");
-            startTime = System.currentTimeMillis();
+            System.out.println("Main Loop: " + (System.nanoTime() - startTime) + "ns");
+            //startTime = System.currentTimeMillis();
             framePtr = getScreenBuffer.apply()[0];
             var frame = instance.memory().readBytes(framePtr.asInt(), 512 * 448 * 2);
             renderer.updateFrame(frame);
-            System.out.println("Render Frame: " + (System.currentTimeMillis() - startTime) + "ms");
-            System.out.println("======================");
+            //System.out.println("Render Frame: " + (System.currentTimeMillis() - startTime) + "ms");
+            //System.out.println("======================");
             //System.out.println(frame[(int) Math.round(Math.random() * 1000)]);
         }
     }
