@@ -29,12 +29,12 @@
     <dependency>
       <groupId>com.dylibso.chicory</groupId>
       <artifactId>runtime</artifactId>
-      <version>0.0.11</version>
+      <version>0.0.12</version>
     </dependency>
     <dependency>
       <groupId>com.dylibso.chicory</groupId>
       <artifactId>aot</artifactId>
-      <version>0.0.11</version>
+      <version>0.0.12</version>
     </dependency>
   </dependencies>
 
