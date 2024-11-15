@@ -1,13 +1,13 @@
 package com.dylibso.snes;
 
-import com.dylibso.chicory.aot.AotMachine;
-import com.dylibso.chicory.log.SystemLogger;
+import com.dylibso.chicory.experimental.aot.AotMachineFactory;
 import com.dylibso.chicory.runtime.HostFunction;
-import com.dylibso.chicory.runtime.HostImports;
+import com.dylibso.chicory.runtime.ImportValues;
+import com.dylibso.chicory.runtime.Store;
 import com.dylibso.chicory.wasm.types.ValueType;
-import com.dylibso.chicory.wasm.types.Value;
-import com.dylibso.chicory.runtime.Module;
+import com.dylibso.chicory.wasm.Parser;
 import com.dylibso.chicory.runtime.Instance;
+import com.dylibso.chicory.experimental.aot.AotMachine;
 
 import java.awt.image.DataBufferInt;
 import java.io.IOException;
@@ -70,61 +70,60 @@ public class App
     public static void main(String[] cliArgs) throws IOException, InterruptedException {
 
         var fdWrite = new HostFunction(
-                (Instance instance, Value... args) -> {
-                    System.out.println("fdWrite: " + Arrays.toString(args));
-                    return null;
-                },
                 "a",
                 "a",
                 List.of(ValueType.I32, ValueType.I32, ValueType.I32, ValueType.I32),
-                List.of(ValueType.I32));
+                List.of(ValueType.I32),
+                (Instance instance, long... args) -> {
+                    System.out.println("fdWrite: " + Arrays.toString(args));
+                    return null;
+                });
 
         var resizeHeap = new HostFunction(
-                (Instance instance, Value... args) -> {
-                    System.out.println("resizeHeap: " + Arrays.toString(args));
-                    return null;
-                },
                 "a",
                 "b",
                 List.of(ValueType.I32),
-                List.of(ValueType.I32));
+                List.of(ValueType.I32),
+                (Instance instance, long... args) -> {
+                    System.out.println("resizeHeap: " + Arrays.toString(args));
+                    return null;
+                });
 
         var dateNow = new HostFunction(
-                (Instance instance, Value... args) -> {
-                    System.out.println("dateNow: " + Arrays.toString(args));
-                    return null;
-                },
                 "a",
                 "c",
                 List.of(),
-                List.of(ValueType.F64));
+                List.of(ValueType.F64),
+                (Instance instance, long... args) -> {
+                    System.out.println("dateNow: " + Arrays.toString(args));
+                    return null;
+                });
 
         var memcpy = new HostFunction(
-                (Instance instance, Value... args) -> {
-                    System.out.println("Memcpy: " + Arrays.toString(args));
-                    var dest = args[0].asInt();
-                    var src = args[1].asInt();
-                    var size = args[2].asInt();
-                    instance.memory().copy(dest, src, size);
-                    return null;
-                },
                 "a",
                 "d",
                 List.of(ValueType.I32, ValueType.I32, ValueType.I32),
-                List.of());
+                List.of(),
+            (Instance instance, long... args) -> {
+                System.out.println("Memcpy: " + Arrays.toString(args));
+                var dest = (int) args[0];
+                var src = (int) args[1];
+                var size = (int) args[2];
+                instance.memory().copy(dest, src, size);
+                return null;
+            });
 
-        var imports = new HostImports(new HostFunction[]{
-                fdWrite, resizeHeap, dateNow, memcpy
-        });
+//        var store = new Store();
+//        store.addFunction(fdWrite, resizeHeap, dateNow, memcpy);
+//        var is = App.class.getResourceAsStream("/snes9x_2005-raw.wasm");
+//        var module = Parser.parse(is);
+//        Instance instance = store.instantiate("snes", module);
 
-        var builder = Module
-                .builder("snes9x_2005-raw.wasm")
-                .withLogger(new SystemLogger())
-                .withHostImports(imports);
+        var imports = ImportValues.builder().withFunctions(List.of(memcpy, dateNow, resizeHeap, fdWrite)).build();
 
-        Module module = builder.withMachineFactory(instance -> new AotMachine(instance)).build();
-
-        Instance instance = module.instantiate();
+        var is = App.class.getResourceAsStream("/snes9x_2005-raw.wasm");
+        var module = Parser.parse(is);
+        var instance = Instance.builder(module).withImportValues(imports).withMachineFactory(AotMachine::new).build();
 
         var callCtors = instance.export("f");
         var setJoypadInput = instance.export("h");
@@ -149,10 +148,10 @@ public class App
         //var romPath = Paths.get("/Users/ben/Super Mario World.smc");
         var romPath = Paths.get("/Users/ben/The Legend of Zelda - A Link to the Past.smc");
         var romBytes = Files.readAllBytes(romPath);
-        var romLen = Value.i32(romBytes.length);
+        var romLen = (long)romBytes.length;
         var romPtr = malloc.apply(romLen)[0];
-        instance.memory().write(romPtr.asInt(), romBytes);
-        var sampleRate = Value.i32(36000);
+        instance.memory().write((int)romPtr, romBytes);
+        var sampleRate = 36000L;
         startWithRom.apply(romPtr, romLen, sampleRate);
         free.apply(romPtr);
 
@@ -166,20 +165,20 @@ public class App
         frameWindow.pack();
         frameWindow.setVisible(true);
 
-        Value framePtr = null;
+        long framePtr = 0;
 
         while (true) {
-            setJoypadInput.apply(Value.i32(0));
+            setJoypadInput.apply(0L);
             long startTime = System.nanoTime();
             mainLoop.apply();
             System.out.println("Main Loop: " + (System.nanoTime() - startTime) + "ns");
-            //startTime = System.currentTimeMillis();
+            startTime = System.currentTimeMillis();
             framePtr = getScreenBuffer.apply()[0];
-            var frame = instance.memory().readBytes(framePtr.asInt(), 512 * 448 * 2);
+            var frame = instance.memory().readBytes((int)framePtr, 512 * 448 * 2);
             renderer.updateFrame(frame);
-            //System.out.println("Render Frame: " + (System.currentTimeMillis() - startTime) + "ms");
-            //System.out.println("======================");
-            //System.out.println(frame[(int) Math.round(Math.random() * 1000)]);
+            System.out.println("Render Frame: " + (System.currentTimeMillis() - startTime) + "ms");
+            System.out.println("======================");
+            System.out.println(frame[(int) Math.round(Math.random() * 1000)]);
         }
     }
 }
